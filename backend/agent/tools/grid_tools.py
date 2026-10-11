@@ -1,5 +1,4 @@
 import os
-import json
 from cedarpy import is_authorized, Decision
 
 POLICY_PATH = os.path.abspath(
@@ -11,7 +10,10 @@ def evaluate_cedar_policy(
     water_level_cm: float,
     neutral_amps: float,
     phase_r_volts: float,
-    oil_temp: float
+    oil_temp: float,
+    operator_zone: str = "Kothrud",
+    transformer_zone: str = "Kothrud",
+    operator_role: str = "WardEngineer"
 ) -> dict:
     if not os.path.exists(POLICY_PATH):
         raise FileNotFoundError(f"Cedar policy file not found at: {POLICY_PATH}")
@@ -20,14 +22,16 @@ def evaluate_cedar_policy(
         policies = f.read()
 
     request = {
-        "principal": 'Role::"GridAgent"',
+        "principal": f'Role::"{operator_role}"',
         "action": f'Action::"{action_name}"',
-        "resource": 'Transformer::"DP-PUNE-KOTHRUD-042"',
+        "resource": f'Transformer::"{transformer_zone}-042"',
         "context": {
             "waterLevelCm": int(round(water_level_cm)),
             "neutralCurrentAmps": int(round(neutral_amps)),
             "phaseRVolts": int(round(phase_r_volts)),
             "oilTempCelsius": int(round(oil_temp)),
+            "operatorZone": operator_zone,
+            "transformerZone": transformer_zone
         },
     }
 

@@ -4,7 +4,8 @@ permit (
     resource
 )
 when {
-    context.waterLevelCm > 20 || context.neutralCurrentAmps > 40 || context.phaseRVolts < 50
+    context.operatorZone == context.transformerZone &&
+    (context.waterLevelCm > 20 || context.neutralCurrentAmps > 40 || context.phaseRVolts < 50)
 };
 
 permit (
