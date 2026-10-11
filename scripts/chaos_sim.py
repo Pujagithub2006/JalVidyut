@@ -1,9 +1,7 @@
 ﻿import sys
 import os
-import time
 from typing import Any, Dict, List
 
-# Ensure backend/agent is in sys.path so its internal modules resolve
 agent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend", "agent"))
 if agent_dir not in sys.path:
     sys.path.insert(0, agent_dir)
@@ -20,7 +18,7 @@ class MonsoonChaosSimulator:
             {
                 "name": "SCENARIO_1_DRY_NOMINAL",
                 "telemetry": {
-                    "transformerId": "DP-PUNE-KOTHRUD-042",
+                    "transformerId": "DP-PUNE-KOTHRUD-041",
                     "zone": "Kothrud",
                     "waterLevelCm": 4.5,
                     "neutralCurrentAmps": 1.2,
@@ -44,7 +42,7 @@ class MonsoonChaosSimulator:
             {
                 "name": "SCENARIO_3_BORDERLINE_WATER_HUMAN_GATE",
                 "telemetry": {
-                    "transformerId": "DP-PUNE-KOTHRUD-042",
+                    "transformerId": "DP-PUNE-KOTHRUD-043",
                     "zone": "Kothrud",
                     "waterLevelCm": 18.0,
                     "neutralCurrentAmps": 12.0,
@@ -56,7 +54,7 @@ class MonsoonChaosSimulator:
             {
                 "name": "SCENARIO_4_CATASTROPHIC_DELUGE_LATERAL_SHUNT",
                 "telemetry": {
-                    "transformerId": "DP-PUNE-KOTHRUD-042",
+                    "transformerId": "DP-PUNE-KOTHRUD-044",
                     "zone": "Kothrud",
                     "waterLevelCm": 28.5,
                     "neutralCurrentAmps": 49.2,
