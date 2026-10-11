@@ -8,6 +8,7 @@ from intelligence.bedrock_risk import bedrock_scorer
 from execution.step_up_gate import step_up_gate
 from notifications.sns_dispatcher import sns_dispatcher
 from sentinel.sensor_sentinel import sensor_sentinel
+from topology.grid_graph import grid_topology
 
 
 class JalVidyutAgent:
@@ -114,6 +115,11 @@ class JalVidyutAgent:
 
         actions_taken = []
         if cedar_check["decision"] == "ALLOW":
+            # 5. Topological Blast-Radius & Perimeter Isolation (Cycle 07)
+            perimeter = grid_topology.compute_quarantine_perimeter(transformer_id, neutral_amps)
+            actions_taken.append({"topologyPerimeter": perimeter})
+            trace_log.append(f"Topology Perimeter Computed: Level={perimeter['isolationLevel']}, Circuits={perimeter['quarantinedCircuits']}")
+
             trip_result = simulate_feeder_isolation(
                 transformer_id,
                 f"Emergency autonomous trip: water level at {water_level_cm}cm exceeded safety boundary for {operator_zone}."
@@ -133,7 +139,7 @@ class JalVidyutAgent:
             actions_taken.append(dispatch_result)
             trace_log.append(f"Dispatched Lineman work order: {dispatch_result['ticketId']}")
 
-            # 5. Amazon SNS Notifications Dispatch
+            # 6. Amazon SNS Multi-Channel Notification Dispatch
             sms_res = sns_dispatcher.dispatch_lineman_sms(
                 phone_number="+919876543210",
                 ticket_id=dispatch_result["ticketId"],
@@ -146,7 +152,7 @@ class JalVidyutAgent:
             ward_res = sns_dispatcher.broadcast_public_ward_alert(
                 zone=transformer_zone,
                 transformer_id=transformer_id,
-                reason=f"Water level reached {water_level_cm}cm with leakage {neutral_amps}A."
+                reason=f"Water level reached {water_level_cm}cm with leakage {neutral_amps}A. Quarantine level: {perimeter['isolationLevel']}."
             )
             actions_taken.append({"ward_broadcast": ward_res})
             trace_log.append("Dispatched Amazon SNS SMS work orders and Ward emergency alerts.")
