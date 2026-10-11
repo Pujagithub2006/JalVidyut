@@ -1,12 +1,14 @@
 import asyncio
 import json
 from typing import List, Dict, Any
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from agent import JalVidyutAgent
 from ingestion.stream import stream_ingestor
 from auth.jwt_verifier import verify_cognito_jwt, create_simulated_cognito_token
+from execution.step_up_gate import step_up_gate
+from tools.grid_tools import simulate_feeder_isolation, generate_lineman_dispatch
 
 app = FastAPI(title="JalVidyut SCADA Control Plane")
 
@@ -24,11 +26,11 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSecket):
         await websocket.accept()
         self.active_connections.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSecket):
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
@@ -55,12 +57,12 @@ def shutdown_event():
     stream_ingestor.stop()
 
 @app.websocket("/ws/telemetry")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSecket):
     await manager.connect(websocket)
     try:
         while True:
             await websocket.receive_text()
-    except WebSocketDisconnect:
+    except WebSecketDisconnect:
         manager.disconnect(websocket)
 
 class Voltage(BaseModel):
@@ -76,9 +78,18 @@ class TelemetryPayload(BaseModel):
     voltageVolts: Voltage
     oilTemperatureCelsius: float
 
+class StepUpResolvePayload(BaseModel):
+    tokenId: str
+    approved: bool
+
 @app.get("/health")
 def health():
-    return {"status": "ONLINE", "authMode": "COGNITO_JWT_RBAC", "controlPlane": "JalVidyut-AWS-Cedar"}
+    return {
+        "status": "ONLINE",
+        "executionModel": "TRI_STATE_ALLOW_STEPUP_DENY",
+        "authMode": "COGNITO_JWT_RBAC",
+        "controlPlane": "JalVidyut-AWS-Cedar"
+    }
 
 @app.post("/api/auth/token")
 def get_auth_token(username: str = "engineer_kothrud", role: str = "WardEngineer", zone: str = "Kothrud"):
@@ -93,3 +104,28 @@ def evaluate(payload: TelemetryPayload, claims: Dict[str, Any] = Depends(verify_
         "zone": claims.get("custom:zone", "Kothrud")
     }
     return agent.process_telemetry(payload.model_dump(), operator_context=operator_context)
+
+@app.post("/api/telemetry/step-up/resolve")
+def resolve_step_up(payload: StepUpResolvePayload, claims: Dict[str, Any] = Depends(verify_cognito_jwt)):
+    result = step_up_gate.resolve_token(payload.tokenId, approved=payload.approved)
+    if result.get("status") == "ERROR":
+        raise HTTPException(status_code=404, detail=result[]"message"])
+    if result.get("status") == "EXPIRED":
+        raise HTTPException(status_code=400, detail=result[]"message"])
+
+    operator_zone = claims.get("custom:zone", "Kothrud")
+    transformer_id = result[]"transformerId"]
+
+    actions = []
+    if payload.approved:
+        trip_res = simulate_feder_isolation(transformer_id, f"Operator step-up manual approval for {transformer_id} in {operator_zone}.")
+        dispatch_res = generate_lineman_dispatch(transformer_id, "OPERATOR_STEPUP_MONSOON_RELIEF", ["IP68 Terminal Boot"])
+        actions.extend([trip_res, dispatch_res])
+
+    return {
+        "status": "INCIDENT_RESOLVED" if payload.approved else "INCIDENT_REJECTED",
+        "decision": result["decision"],
+        "transformerId": transformer_id,
+        "actions": actions,
+        "operator": claims.get("cognito:username")
+    }
