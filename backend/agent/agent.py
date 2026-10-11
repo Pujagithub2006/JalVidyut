@@ -7,6 +7,7 @@ from tools.grid_tools import (
 from intelligence.bedrock_risk import bedrock_scorer
 from execution.step_up_gate import step_up_gate
 from notifications.sns_dispatcher import sns_dispatcher
+from sentinel.sensor_sentinel import sensor_sentinel
 
 
 class JalVidyutAgent:
@@ -31,6 +32,27 @@ class JalVidyutAgent:
 
         operator_zone = operator_context.get("zone", "Kothrud") if operator_context else "Kothrud"
         operator_role = operator_context.get("role", "WardEngineer") if operator_context else "WardEngineer"
+
+        # 0. Pre-Evaluation Sensor Sanity Audit (Cycle 06 Sentinel)
+        sentinel_audit = sensor_sentinel.audit_telemetry(telemetry)
+        if not sentinel_audit["isValid"]:
+            flags_str = ", ".join(sentinel_audit["flags"])
+            ticket = generate_lineman_dispatch(
+                transformer_id,
+                "SENSOR_TRANSDUCER_FAULT",
+                ["Replacement Reed Switch", "CT Secondary Lead Kit", "Telemetry Daughterboard"]
+            )
+            return {
+                "status": "SENSOR_FAULT_HALTED",
+                "cedarDecision": "NONE",
+                "sentinelAudit": sentinel_audit,
+                "actions": [ticket],
+                "trace": [
+                    f"SCADA Telemetry for {transformer_id} REJECTED by Sentinel.",
+                    f"Anomalies Detected: {flags_str}.",
+                    f"Dispatched Lineman Sensor Maintenance: {ticket['ticketId']}"
+                ]
+            }
 
         # 1. Real-time Bedrock Hydrological Risk Assessment
         bedrock_eval = bedrock_scorer.calculate_surge_risk(telemetry, geographical_context=geo_context)
