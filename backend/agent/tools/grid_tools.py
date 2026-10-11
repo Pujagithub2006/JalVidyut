@@ -13,7 +13,8 @@ def evaluate_cedar_policy(
     oil_temp: float,
     operator_zone: str = "Kothrud",
     transformer_zone: str = "Kothrud",
-    operator_role: str = "WardEngineer"
+    operator_role: str = "WardEngineer",
+    ml_flood_surge_risk: float = 0.0
 ) -> dict:
     if not os.path.exists(POLICY_PATH):
         raise FileNotFoundError(f"Cedar policy file not found at: {POLICY_PATH}")
@@ -31,7 +32,8 @@ def evaluate_cedar_policy(
             "phaseRVolts": int(round(phase_r_volts)),
             "oilTempCelsius": int(round(oil_temp)),
             "operatorZone": operator_zone,
-            "transformerZone": transformer_zone
+            "transformerZone": transformer_zone,
+            "mlFloodSurgeRiskPercent": int(round(ml_flood_surge_risk * 100))
         },
     }
 
