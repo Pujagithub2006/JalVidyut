@@ -281,12 +281,6 @@ Amazon Bharat Builds (ABB) 2026
 
 Puja Nikam
 
-**AI Coding Tools Used**
-
-- Amazon Q Developer / Kiro
-- Claude Code
-- Gemini
-
 ---
 
 #  License
